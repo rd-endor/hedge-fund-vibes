@@ -10,6 +10,7 @@ type Signal = {
   targetEquityMin: number;
   targetEquityMax: number;
   rationale: string;
+  detailsJson?: string;
 };
 
 export default function HistoryPage() {

@@ -77,6 +77,7 @@ function deriveRiskBullets(detailsJson: string | undefined): string[] {
 export default function Home() {
   const [latest, setLatest] = useState<Signal | null>(null);
   const [loading, setLoading] = useState(false);
+  const [exposureFloor, setExposureFloor] = useState<number>(20);
 
   async function runSignal() {
     setLoading(true);
@@ -95,6 +96,11 @@ export default function Home() {
       const res = await fetch("/api/signals");
       const data = await res.json();
       setLatest(data.signals?.[0] ?? null);
+
+      // Load settings for exposure floor
+      const settingsRes = await fetch("/api/settings");
+      const settings = await settingsRes.json();
+      setExposureFloor(settings.exposureFloor ?? 20);
     })();
   }, []);
 
@@ -113,7 +119,7 @@ export default function Home() {
         <header className="space-y-2">
           <h1 className="text-2xl font-semibold">RiskGuard</h1>
           <p className="text-sm text-gray-600">
-            Dynamic risk regime signals (event-driven). Minimum exposure floor: 20%.
+            Dynamic risk regime signals (event-driven). Minimum exposure floor: {exposureFloor}%.
           </p>
         </header>
 
