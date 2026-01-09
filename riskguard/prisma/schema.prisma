@@ -1,0 +1,43 @@
+datasource db {
+  provider = "sqlite"
+  // url removed in Prisma 7
+}
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model RiskSignal {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+
+  // Risk regime output
+  state       RiskState
+  confidence  Float    // 0.0 - 1.0
+
+  // Suggested exposure
+  targetEquityMin Int  // e.g. 20
+  targetEquityMax Int  // e.g. 40
+
+  // Explanation
+  rationale   String   // short human-readable summary
+  detailsJson String   // JSON string with the computed inputs/metrics snapshot
+
+  // For dedup / escalation
+  version     Int      @default(1)
+}
+
+enum RiskState {
+  RISK_ON
+  TRANSITION
+  RISK_OFF
+}
+
+model Settings {
+  id                            String  @id @default("singleton")
+  exposureFloor                 Int     @default(20)  // Minimum exposure (default 20%)
+  riskOffMaxExposure            Int     @default(40)  // Max exposure in RISK_OFF state (default 40%)
+  confidenceEscalationThreshold Float   @default(0.08) // Confidence increase threshold for escalation (default 0.08 = 8%)
+  updatedAt                     DateTime @updatedAt
+}
