@@ -82,10 +82,24 @@ export default function Home() {
   async function runSignal() {
     setLoading(true);
     try {
-      await fetch("/api/signals/run", { method: "POST" });
+      const runRes = await fetch("/api/signals/run", { method: "POST" });
+      if (!runRes.ok) {
+        const error = await runRes.json();
+        console.error("Error running signal:", error);
+        alert(`Error: ${error.error || "Failed to run signal"}`);
+        return;
+      }
+      
+      const runData = await runRes.json();
+      console.log("Signal run result:", runData);
+      
+      // Refresh the signals list
       const res = await fetch("/api/signals");
       const data = await res.json();
       setLatest(data.signals?.[0] ?? null);
+    } catch (error) {
+      console.error("Error:", error);
+      alert(`Error: ${error instanceof Error ? error.message : "Failed to run signal"}`);
     } finally {
       setLoading(false);
     }
