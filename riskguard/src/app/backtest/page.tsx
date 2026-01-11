@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { runBacktest, runCrisisBacktests } from "../../utils/backtestEngine";
 import type { BacktestMetrics } from "../../utils/backtestEngine";
-import { BacktestChart, RiskScoreChart } from "../../components/BacktestChart";
+import { BacktestChart, RiskScoreChart, ExposureTimelineChart } from "../../components/BacktestChart";
 import { BacktestMetrics as BacktestMetricsComponent } from "../../components/BacktestMetrics";
 import { RefreshCw, Calendar, Play } from "lucide-react";
 
@@ -89,8 +89,8 @@ export default function BacktestPage() {
             Test the risk framework's performance during historical market periods
           </p>
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
-            <strong>Note:</strong> Free API tiers have limited historical data. Periods 2019-2022 work best. 
-            Older periods (2001, 2008) may have incomplete data. Check browser console (F12) for progress.
+            <strong>Note:</strong> Alpha Vantage free tier provides only the last 100 trading days (~4-5 months) of data. 
+            For longer backtests, use a premium API key or select recent date ranges. Check browser console (F12) for progress.
           </div>
         </header>
 
@@ -211,6 +211,14 @@ export default function BacktestPage() {
             <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Drawdown Analysis</h2>
               <BacktestChart results={results.results} showDrawdown={true} />
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Exposure Timeline</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Shows when the risk model suggests being fully invested (green) vs reducing allocation (yellow/red)
+              </p>
+              <ExposureTimelineChart results={results.results} />
             </div>
           </div>
         )}

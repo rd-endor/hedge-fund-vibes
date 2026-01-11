@@ -32,52 +32,158 @@ export interface BacktestMetrics {
   results: BacktestResult[];
 }
 
+// ==========================================
+// SCORING FUNCTIONS (mirrored from completeRiskEngine.ts)
+// ==========================================
+
+function calculateTrendScore(sp500: { price: number; ma50: number; ma200: number; ma10Month: number }): number {
+  let score = 0;
+  if (sp500.price < sp500.ma10Month) score += 12;
+  if (sp500.price < sp500.ma200) score += 8;
+  if (sp500.price < sp500.ma50) score += 5;
+  if (sp500.ma50 < sp500.ma200) score += 5;
+  return Math.min(15, score * 0.5);
+}
+
+function calculateVIXScore(vix: { current: number; sixMonthAvg: number }): number {
+  let score = 0;
+  if (vix.current > 30) score += 15;
+  else if (vix.current > 25) score += 10;
+  else if (vix.current > 20) score += 5;
+  
+  const vixRatio = vix.current / vix.sixMonthAvg;
+  if (vixRatio > 1.5) score += 5;
+  
+  return Math.min(10, score * 0.5);
+}
+
+function calculateBreadthScore(breadth: { advancing: number; declining: number; avgCorrelation: number }): number {
+  let score = 0;
+  const ratio = breadth.advancing / breadth.declining;
+  if (ratio < 0.6) score += 16;
+  else if (ratio < 0.8) score += 8;
+  else if (ratio < 1.0) score += 4;
+  if (ratio < 0.4) score += 9;
+  return Math.min(15, score * 0.6);
+}
+
+function calculateVelocityScore(sp500: { price: number; priceWeekAgo: number }): number {
+  const weeklyChange = (sp500.price - sp500.priceWeekAgo) / sp500.priceWeekAgo;
+  if (weeklyChange < -0.05) return 7;
+  if (weeklyChange < -0.03) return 5;
+  if (weeklyChange < -0.02) return 3;
+  return 0;
+}
+
+function calculateCorrelationScore(breadth: { avgCorrelation: number }): number {
+  if (breadth.avgCorrelation > 0.8) return 3;
+  if (breadth.avgCorrelation > 0.7) return 2;
+  if (breadth.avgCorrelation > 0.6) return 1;
+  return 0;
+}
+
+function calculateFedScore(fed: { fedFundsRate: number; fedFundsRatePrev: number; balanceSheet: number; balanceSheetPrev: number }): number {
+  let score = 0;
+  const rateChange = fed.fedFundsRate - fed.fedFundsRatePrev;
+  if (rateChange > 1.0) score += 6;
+  else if (rateChange > 0.25) score += 4;
+  else if (rateChange < -0.25) score -= 2;
+  
+  const bsChange = (fed.balanceSheet - fed.balanceSheetPrev) / fed.balanceSheetPrev;
+  if (bsChange < -0.10) score += 4;
+  else if (bsChange < -0.05) score += 2;
+  else if (bsChange > 0.05) score -= 2;
+  
+  return Math.max(0, Math.min(10, score));
+}
+
+function calculateYieldCurveScore(yields: { yield10Y: number; yield2Y: number; yield3M: number }): number {
+  let score = 0;
+  const spread_10y2y = yields.yield10Y - yields.yield2Y;
+  if (spread_10y2y < -0.50) score += 5;
+  else if (spread_10y2y < -0.10) score += 3;
+  else if (spread_10y2y < 0) score += 1;
+  
+  const spread_10y3m = yields.yield10Y - yields.yield3M;
+  if (spread_10y3m < -0.50) score += 3;
+  else if (spread_10y3m < 0) score += 1;
+  
+  return Math.min(8, score);
+}
+
+function calculateISMScore(ism: { current: number; trend: number }): number {
+  let score = 0;
+  if (ism.current < 45) score += 5;
+  else if (ism.current < 50) score += 3;
+  else if (ism.current > 55) score -= 2;
+  if (ism.current < ism.trend - 2) score += 2;
+  return Math.max(0, Math.min(7, score));
+}
+
+function calculateFearGreedScore(index: number): number {
+  if (index > 80) return 5;
+  else if (index > 65) return 3;
+  else if (index < 20) return -3;
+  return 0;
+}
+
 /**
- * Calculate risk score from historical data point
- * This is a simplified version that uses available data
+ * Calculate risk score from historical data point using full risk engine logic
+ * This mirrors the complete risk engine calculation but works with historical data
  */
-async function calculateRiskScoreFromData(data: HistoricalDataPoint): Promise<{
+async function calculateHistoricalRiskScore(data: HistoricalDataPoint): Promise<{
   totalScore: number;
   mode: 'bull' | 'caution' | 'bear';
   suggestedExposure: number;
+  breakdown: {
+    technical: { trend: number; volatility: number; breadth: number; velocity: number; correlation: number; total: number };
+    macro: { fedPolicy: number; yieldCurve: number; ism: number; globalLiquidity: number; total: number };
+    sentiment: { putCall: number; aaii: number; fearGreed: number; cot: number; total: number };
+  };
 }> {
-  // Use the actual risk engine if we have enough data
-  // Otherwise, calculate a simplified score
+  // Technical scores
+  const technical = {
+    trend: data.sp500 ? calculateTrendScore(data.sp500) : 0,
+    volatility: data.vix ? calculateVIXScore(data.vix) : 0,
+    breadth: data.breadth ? calculateBreadthScore(data.breadth) : 0,
+    velocity: data.sp500 ? calculateVelocityScore(data.sp500) : 0,
+    correlation: data.breadth ? calculateCorrelationScore(data.breadth) : 0,
+    total: 0
+  };
+  technical.total = technical.trend + technical.volatility + technical.breadth + 
+                    technical.velocity + technical.correlation;
   
-  let totalScore = 0;
+  // Macro scores
+  const macro = {
+    fedPolicy: data.fed ? calculateFedScore(data.fed) : 0,
+    yieldCurve: data.yields ? calculateYieldCurveScore(data.yields) : 0,
+    ism: data.ism ? calculateISMScore(data.ism) : 0,
+    globalLiquidity: data.globalLiquidity !== undefined ? data.globalLiquidity : 2,
+    total: 0
+  };
+  macro.total = macro.fedPolicy + macro.yieldCurve + macro.ism + macro.globalLiquidity;
   
-  // Technical score (simplified)
-  if (data.sp500) {
-    let techScore = 0;
-    if (data.sp500.price < data.sp500.ma10Month) techScore += 7.5;
-    if (data.sp500.price < data.sp500.ma200) techScore += 4;
-    if (data.sp500.price < data.sp500.ma50) techScore += 2.5;
-    totalScore += techScore;
-  }
+  // Sentiment scores
+  const putCallRatio = data.putCallRatio !== undefined ? data.putCallRatio : 1.0;
+  const putCallScore = putCallRatio > 1.2 ? 6 : putCallRatio > 1.0 ? 4 : putCallRatio > 0.8 ? 2 : 0;
   
-  if (data.vix) {
-    let volScore = 0;
-    if (data.vix.current > 30) volScore += 7.5;
-    else if (data.vix.current > 25) volScore += 5;
-    else if (data.vix.current > 20) volScore += 2.5;
-    totalScore += volScore;
-  }
+  const aaiiSentiment = data.aaii || { bullish: 33, bearish: 33, neutral: 34 };
+  const aaiiScore = aaiiSentiment.bearish > 45 ? 5 : aaiiSentiment.bearish > 35 ? 3 : aaiiSentiment.bearish > 25 ? 1 : 0;
   
-  // Macro score (simplified)
-  if (data.yields) {
-    const spread = data.yields.yield10Y - data.yields.yield2Y;
-    if (spread < -0.5) totalScore += 4;
-    else if (spread < -0.1) totalScore += 2;
-    else if (spread < 0) totalScore += 1;
-  }
+  const fearGreedIndex = data.fearGreed !== undefined ? data.fearGreed : 50;
   
-  if (data.fed) {
-    const rateChange = data.fed.fedFundsRate - data.fed.fedFundsRatePrev;
-    if (rateChange > 1.0) totalScore += 6;
-    else if (rateChange > 0.25) totalScore += 4;
-  }
+  const sentiment = {
+    putCall: putCallScore,
+    aaii: aaiiScore,
+    fearGreed: calculateFearGreedScore(fearGreedIndex),
+    cot: data.cot !== undefined ? data.cot : 1,
+    total: 0
+  };
+  sentiment.total = sentiment.putCall + sentiment.aaii + sentiment.fearGreed + sentiment.cot;
   
-  // Determine mode and exposure
+  const totalScore = technical.total + macro.total + sentiment.total;
+  
+  // Determine mode and exposure (same logic as complete risk engine)
   let mode: 'bull' | 'caution' | 'bear';
   let suggestedExposure: number;
   
@@ -92,7 +198,7 @@ async function calculateRiskScoreFromData(data: HistoricalDataPoint): Promise<{
     suggestedExposure = 80;
   }
   
-  return { totalScore, mode, suggestedExposure };
+  return { totalScore, mode, suggestedExposure, breakdown: { technical, macro, sentiment } };
 }
 
 /**
@@ -122,8 +228,15 @@ export async function runBacktest(
     console.log(`Using ${dataWithPrices.length} data points with price information`);
   
     const results: BacktestResult[] = [];
+    
+    // Portfolio tracking for risk engine strategy
     let portfolioValue = initialCapital;
+    let equityValue = 0; // Will be set based on first risk score
+    let cashValue = initialCapital; // Start with all cash, will allocate on first step
+    
+    // Buy-and-hold strategy (always 100% equity, no rebalancing)
     let buyHoldValue = initialCapital;
+    
     let maxDrawdown = 0;
     let buyHoldMaxDrawdown = 0;
     let peakPortfolio = initialCapital;
@@ -138,27 +251,63 @@ export async function runBacktest(
     // Use only data points with price information
     const validDataPoints = historicalData.filter(d => d.sp500);
     
+    // Track previous exposure to detect changes
+    let previousExposure: number | null = null;
+    
     for (let i = 0; i < validDataPoints.length; i++) {
       const data = validDataPoints[i];
       if (!data.sp500) continue; // Skip if no price data (shouldn't happen after filter)
     
-    // Calculate risk score
-    const { totalScore, mode, suggestedExposure } = await calculateRiskScoreFromData(data);
+      // Calculate risk score using full risk engine
+      const { totalScore, mode, suggestedExposure } = await calculateHistoricalRiskScore(data);
     
       // Get current and previous prices
       const currentPrice = data.sp500.price;
       const prevData = i > 0 ? validDataPoints[i - 1] : null;
       const previousPrice = prevData?.sp500?.price ?? currentPrice;
     
-      // Calculate returns
+      // Calculate market return
       const marketReturn = (currentPrice - previousPrice) / previousPrice;
       
-      // Update portfolio based on suggested exposure
-      const exposure = suggestedExposure / 100;
-      const portfolioReturn = marketReturn * exposure;
-      portfolioValue = portfolioValue * (1 + portfolioReturn);
+      // On first iteration, allocate based on risk score before applying any returns
+      // On subsequent iterations, apply returns first, then rebalance if needed
+      if (previousExposure === null) {
+        // First time: allocate based on initial risk score
+        const targetEquity = portfolioValue * (suggestedExposure / 100);
+        equityValue = targetEquity;
+        cashValue = portfolioValue - targetEquity;
+        // portfolioValue remains the same (just reallocated)
+        previousExposure = suggestedExposure;
+      } else {
+        // Apply market return to existing equity position (cash earns no return)
+        equityValue = equityValue * (1 + marketReturn);
+        portfolioValue = equityValue + cashValue;
+        
+        // REBALANCE if exposure changed
+        if (previousExposure !== suggestedExposure) {
+          // Calculate target equity allocation based on current portfolio value
+          const targetEquity = portfolioValue * (suggestedExposure / 100);
+          const rebalanceAmount = targetEquity - equityValue;
+          
+          if (rebalanceAmount > 0) {
+            // Need to buy more equity - use cash
+            const cashToUse = Math.min(cashValue, rebalanceAmount);
+            equityValue += cashToUse;
+            cashValue -= cashToUse;
+          } else if (rebalanceAmount < 0) {
+            // Need to sell equity - add to cash
+            const equityToSell = Math.min(equityValue, Math.abs(rebalanceAmount));
+            equityValue -= equityToSell;
+            cashValue += equityToSell;
+          }
+          
+          // Update portfolio value after rebalancing
+          portfolioValue = equityValue + cashValue;
+          previousExposure = suggestedExposure;
+        }
+      }
       
-      // Update buy-and-hold
+      // Update buy-and-hold (always 100% equity, no rebalancing needed)
       buyHoldValue = buyHoldValue * (1 + marketReturn);
       
       // Calculate drawdowns
