@@ -1,73 +1,68 @@
-# React + TypeScript + Vite
+# RiskGuard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+RiskGuard is a comprehensive web application designed to assess portfolio risk, and make data-driven investment decisions.
 
-Currently, two official plugins are available:
+## Who It's For
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+This app is targeted at:
+- Busy professionals that want to invest but don't have time
 
-## React Compiler
+## What the App Does
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+RiskGuard provides a suite of tools for financial risk management and strategy validation:
+## Features
 
-## Expanding the ESLint configuration
+- Real-time risk metrics calculation
+- Data visualization using Recharts
+- Interactive backtesting with customizable parameters
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Installation
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/hedge-fund-vibes.git
+   cd hedge-fund-vibes/riskguard
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+4. Open your browser and navigate to `http://localhost:5173`
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Usage
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### Running Backtests
+1. Navigate to the Backtest page
+2. Configure your trading strategy parameters
+3. Select historical data range
+4. Run the backtest and view results in the chart
+
+### Assessing Risk
+1. Use the Risk Engine to input portfolio data
+2. View calculated risk metrics and exposure analysis
+3. Adjust parameters for scenario analysis
+
+
+
+## Technologies Used
+
+- **Frontend**: React, TypeScript, Vite
+- **Styling**: Tailwind CSS
+- **Charts**: Recharts
+- **Icons**: Lucide React
+- **Routing**: React Router DOM
+
+## Contributing
+
+Contributions are welcome! Please read the contributing guidelines before submitting pull requests.
+
+## License
+
+This project is licensed under the MIT License.
