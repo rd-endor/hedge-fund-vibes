@@ -20,7 +20,7 @@ RiskGuard provides a suite of tools for financial risk management and strategy v
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/hedge-fund-vibes.git
+   git clone https://github.com/pawan328/hedge-fund-vibes.git
    cd hedge-fund-vibes/riskguard
    ```
 
