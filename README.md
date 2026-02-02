@@ -44,12 +44,6 @@ RiskGuard provides a suite of tools for financial risk management and strategy v
 3. Select historical data range
 4. Run the backtest and view results in the chart
 
-### Assessing Risk
-1. Use the Risk Engine to input portfolio data
-2. View calculated risk metrics and exposure analysis
-3. Adjust parameters for scenario analysis
-
-
 
 ## Technologies Used
 
@@ -61,7 +55,7 @@ RiskGuard provides a suite of tools for financial risk management and strategy v
 
 ## Contributing
 
-Contributions are welcome! Please read the contributing guidelines before submitting pull requests.
+Contributions are welcome!
 
 ## License
 
